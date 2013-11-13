@@ -3,7 +3,7 @@ package WWW::Pastebin::Bot::Pastebot::Create;
 use warnings;
 use strict;
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 use Carp;
 use URI;
@@ -11,11 +11,11 @@ use LWP::UserAgent;
 use Devel::TakeHashArgs;
 use base 'Class::Data::Accessor';
 
-__PACKAGE__->mk_classaccessors qw(
+__PACKAGE__->mk_classaccessors(qw(
     ua
     uri
     error
-);
+));
 
 use overload q|""| => sub { shift->uri };
 
@@ -23,14 +23,14 @@ sub new {
     my $self = bless {}, shift;
     get_args_as_hash( \@_, \ my %args, {
             timeout => 30,
-            site    => 'http://erxz.com/pb',
+            site    => 'http://p3m.org/pfn',
         }
     ) or croak $@;
 
     $args{ua} ||= LWP::UserAgent->new(
         timeout => $args{timeout},
-        agent   => 'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.8.1.12)'
-                    .' Gecko/20080207 Ubuntu/7.10 (gutsy) Firefox/2.0.0.12',
+        agent   => 'Mozilla/5.0 (X11; Ubuntu; Linux i686; '
+                    . 'rv:21.0) Gecko/20100101 Firefox/21.0',
     );
 
     $self->$_( $args{ $_ } ) for qw(ua site);
@@ -58,20 +58,15 @@ sub paste {
     my $uri = URI->new( $self->site . '/paste' );
 
     my $response = $self->ua->post($uri, \%args);
-    
-    $response->is_success
-        or return $self->_set_error($response, 'net');
 
-    my ( $id ) = $response->content =~ m|<a\s+href=['"]\S+?(\d+)['"]>|xi;
-    unless ( defined $id ) {
-        return $self->_set_error(
+    $response->code == 303
+        or return $self->_set_error(
             'Failed to find link to created paste. Are you sure the site'
             . ' you are using is a correct one? If so, please be kind'
             . ' and send an email to zoffix@cpan.org so I could fix this'
             . ' bug. Thank you!');
-    }
-
-    return $self->uri( URI->new( $self->site . "/$id" ) );
+    
+    return $self->uri( URI->new( $response->header('location') ) );
 }
 
 sub site {
@@ -98,6 +93,8 @@ sub _set_error {
 
 1;
 __END__
+
+=encoding utf8
 
 =head1 NAME
 
@@ -129,7 +126,7 @@ L<Bot::Pastebot>
     my $paste = WWW::Pastebin::Bot::Pastebot::Create->new;
 
     my $paste = WWW::Pastebin::Bot::Pastebot::Create->new(
-        site    => 'http://erxz.com/pb',
+        site    => 'http://p3m.org/pfn'',
         timeout => 10,
     );
 
@@ -146,10 +143,11 @@ as follows:
 
 =head3 C<site>
 
-    ->new( site => 'http://erxz.com/pb' )
+    ->new( site => 'http://p3m.org/pfn' )
 
 B<Optional>. Specifies the URI to pastebin site which is powered by L<Bot::Pastebot>. Make you you don't append any "channel specific" paths.
-This is done internally by the module. B<Defaults to:> C<http://erxz.com/pb>
+This is done internally by the module.
+B<Defaults to:> C<http://p3m.org/pfn>
 
 =head3 C<timeout>
 
